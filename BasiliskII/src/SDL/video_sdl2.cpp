@@ -46,6 +46,7 @@
 
 #include <SDL_mutex.h>
 #include <SDL_thread.h>
+#include <SDL_syswm.h>
 #include <errno.h>
 #include <vector>
 #include <string>
@@ -722,13 +723,20 @@ static float get_mag_rate()
 
 static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flags, int pitch)
 {
+	// Log SDL version
+	SDL_version compiled, linked;
+	SDL_VERSION(&compiled);
+	SDL_GetVersion(&linked);
+	fprintf(stderr, "INFO: SDL compiled version: %d.%d.%d\n", compiled.major, compiled.minor, compiled.patch);
+	fprintf(stderr, "INFO: SDL linked version: %d.%d.%d\n", linked.major, linked.minor, linked.patch);
+
     if (guest_surface) {
         delete_sdl_video_surfaces();
     }
-    
+
 	int window_width = width;
 	int window_height = height;
-	Uint32 window_flags = SDL_WINDOW_ALLOW_HIGHDPI;
+	Uint32 window_flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN;
 	const int window_flags_to_monitor = SDL_WINDOW_FULLSCREEN;
 	
 	if (flags & SDL_WINDOW_FULLSCREEN) {
@@ -777,7 +785,34 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 			return NULL;
 		}
 		fprintf(stderr, "INFO: SDL window created successfully\n");
+
+		// Diagnose window properties
+		Uint32 actual_flags = SDL_GetWindowFlags(sdl_window);
+		fprintf(stderr, "INFO: Window flags: 0x%x\n", actual_flags);
+
+		int w, h;
+		SDL_GetWindowSize(sdl_window, &w, &h);
+		fprintf(stderr, "INFO: Window size: %dx%d\n", w, h);
+
+		// Check if window supports renderer
+		SDL_SysWMinfo wm_info;
+		SDL_VERSION(&wm_info.version);
+		if (SDL_GetWindowWMInfo(sdl_window, &wm_info)) {
+			fprintf(stderr, "INFO: Window WM subsystem: %d\n", wm_info.subsystem);
+		} else {
+			fprintf(stderr, "WARNING: Could not get window WM info: %s\n", SDL_GetError());
+		}
+
 		set_window_name();
+
+		// Explicitly show and raise the window to ensure it's fully initialized
+		SDL_ShowWindow(sdl_window);
+		SDL_RaiseWindow(sdl_window);
+		fprintf(stderr, "INFO: Window shown and raised\n");
+
+		// Process events to ensure window is fully realized
+		SDL_PumpEvents();
+		fprintf(stderr, "INFO: Pumped SDL events\n");
 	}
 	if (flags & SDL_WINDOW_FULLSCREEN) SDL_SetWindowGrab(sdl_window, SDL_TRUE);
 	

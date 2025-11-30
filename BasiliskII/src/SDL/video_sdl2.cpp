@@ -851,39 +851,57 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 		}
 
 		fprintf(stderr, "INFO: Finished enumerating drivers\n");
-		fprintf(stderr, "INFO: Creating SDL renderer (this may take a moment)...\n");
-		fprintf(stderr, "INFO: Renderer flags: 0x%x\n", renderer_flags);
-		fflush(stderr);  // Ensure output is visible immediately
-		sdl_renderer = SDL_CreateRenderer(sdl_window, -1, renderer_flags);
 
-		if (!sdl_renderer) {
-			fprintf(stderr, "ERROR: SDL_CreateRenderer failed: %s\n", SDL_GetError());
+		// Find the software renderer driver index
+		int software_driver_index = -1;
+		for (int i = 0; i < num_drivers; i++) {
+			SDL_RendererInfo info;
+			if (SDL_GetRenderDriverInfo(i, &info) == 0) {
+				if (strcmp(info.name, "software") == 0) {
+					software_driver_index = i;
+					fprintf(stderr, "INFO: Found software renderer at index %d\n", i);
+					break;
+				}
+			}
+		}
 
-			// Try SDL_CreateSoftwareRenderer as fallback - this is a pure CPU renderer
-			// that doesn't depend on the video backend's renderer infrastructure
-			if (renderer_flags & SDL_RENDERER_SOFTWARE) {
-				fprintf(stderr, "INFO: Attempting SDL_CreateSoftwareRenderer as fallback...\n");
+		// Try creating renderer with different strategies
+		if (renderer_flags & SDL_RENDERER_SOFTWARE) {
+			// Strategy 1: Try explicit software driver index with no flags
+			if (software_driver_index >= 0) {
+				fprintf(stderr, "INFO: Creating renderer with explicit software driver (index %d, flags: 0x0)...\n", software_driver_index);
 				fflush(stderr);
-
-				// Get window surface for software renderer
-				SDL_Surface *window_surface = SDL_GetWindowSurface(sdl_window);
-				if (window_surface) {
-					fprintf(stderr, "INFO: Got window surface (%dx%d)\n", window_surface->w, window_surface->h);
-					sdl_renderer = SDL_CreateSoftwareRenderer(window_surface);
-					if (sdl_renderer) {
-						fprintf(stderr, "INFO: SDL_CreateSoftwareRenderer succeeded!\n");
-					} else {
-						fprintf(stderr, "ERROR: SDL_CreateSoftwareRenderer also failed: %s\n", SDL_GetError());
-					}
+				sdl_renderer = SDL_CreateRenderer(sdl_window, software_driver_index, 0);
+				if (sdl_renderer) {
+					fprintf(stderr, "INFO: SDL renderer created successfully with explicit software driver\n");
 				} else {
-					fprintf(stderr, "ERROR: SDL_GetWindowSurface failed: %s\n", SDL_GetError());
+					fprintf(stderr, "ERROR: Explicit software driver failed: %s\n", SDL_GetError());
 				}
 			}
 
+			// Strategy 2: Try auto-select with no flags (let SDL choose)
 			if (!sdl_renderer) {
-				shutdown_sdl_video();
-				return NULL;
+				fprintf(stderr, "INFO: Trying auto-select renderer with no flags...\n");
+				fflush(stderr);
+				sdl_renderer = SDL_CreateRenderer(sdl_window, -1, 0);
+				if (sdl_renderer) {
+					fprintf(stderr, "INFO: SDL renderer created successfully with auto-select\n");
+				} else {
+					fprintf(stderr, "ERROR: Auto-select failed: %s\n", SDL_GetError());
+				}
 			}
+		} else {
+			// Original behavior for non-software renderer
+			fprintf(stderr, "INFO: Creating SDL renderer (this may take a moment)...\n");
+			fprintf(stderr, "INFO: Renderer flags: 0x%x\n", renderer_flags);
+			fflush(stderr);
+			sdl_renderer = SDL_CreateRenderer(sdl_window, -1, renderer_flags);
+		}
+
+		if (!sdl_renderer) {
+			fprintf(stderr, "ERROR: All renderer creation attempts failed\n");
+			shutdown_sdl_video();
+			return NULL;
 		}
 		fprintf(stderr, "INFO: SDL renderer created successfully\n");
 		sdl_renderer_thread_id = SDL_ThreadID();

@@ -840,8 +840,12 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 			SDL_RendererInfo info;
 			fprintf(stderr, "INFO: Getting info for driver %d...\n", i);
 			fflush(stderr);
-			if (SDL_GetRenderDriverInfo(i, &info) == 0) {
-				fprintf(stderr, "  [%d] %s (flags: 0x%x)\n", i, info.name, info.flags);
+			int result = SDL_GetRenderDriverInfo(i, &info);
+			if (result == 0) {
+				fprintf(stderr, "INFO:   [%d] %s (flags: 0x%x)\n", i, info.name, info.flags);
+				fflush(stderr);
+			} else {
+				fprintf(stderr, "ERROR:   [%d] getting driver info: %s\n", i, SDL_GetError());
 				fflush(stderr);
 			}
 		}
@@ -854,8 +858,32 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 
 		if (!sdl_renderer) {
 			fprintf(stderr, "ERROR: SDL_CreateRenderer failed: %s\n", SDL_GetError());
-			shutdown_sdl_video();
-			return NULL;
+
+			// Try SDL_CreateSoftwareRenderer as fallback - this is a pure CPU renderer
+			// that doesn't depend on the video backend's renderer infrastructure
+			if (renderer_flags & SDL_RENDERER_SOFTWARE) {
+				fprintf(stderr, "INFO: Attempting SDL_CreateSoftwareRenderer as fallback...\n");
+				fflush(stderr);
+
+				// Get window surface for software renderer
+				SDL_Surface *window_surface = SDL_GetWindowSurface(sdl_window);
+				if (window_surface) {
+					fprintf(stderr, "INFO: Got window surface (%dx%d)\n", window_surface->w, window_surface->h);
+					sdl_renderer = SDL_CreateSoftwareRenderer(window_surface);
+					if (sdl_renderer) {
+						fprintf(stderr, "INFO: SDL_CreateSoftwareRenderer succeeded!\n");
+					} else {
+						fprintf(stderr, "ERROR: SDL_CreateSoftwareRenderer also failed: %s\n", SDL_GetError());
+					}
+				} else {
+					fprintf(stderr, "ERROR: SDL_GetWindowSurface failed: %s\n", SDL_GetError());
+				}
+			}
+
+			if (!sdl_renderer) {
+				shutdown_sdl_video();
+				return NULL;
+			}
 		}
 		fprintf(stderr, "INFO: SDL renderer created successfully\n");
 		sdl_renderer_thread_id = SDL_ThreadID();

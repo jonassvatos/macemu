@@ -819,33 +819,31 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 	if (!sdl_renderer) {
 		const char *render_driver = PrefsFindString("sdlrender");
 		Uint32 renderer_flags = 0;
+		bool use_software_renderer = false;
 
-		if (render_driver) {
-			fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: %s\n", render_driver);
-			SDL_SetHint(SDL_HINT_RENDER_DRIVER, render_driver);
-			// Force software rendering flag if software renderer is requested
-			if (strcmp(render_driver, "software") == 0) {
-				renderer_flags |= SDL_RENDERER_SOFTWARE;
-				fprintf(stderr, "INFO: Using SDL_RENDERER_SOFTWARE flag\n");
-
-				// Additional hints to minimize blocking behavior with software renderer
-				SDL_SetHint(SDL_HINT_FRAMEBUFFER_ACCELERATION, "0");
-				SDL_SetHint(SDL_HINT_RENDER_BATCHING, "0");
-				fprintf(stderr, "INFO: Disabled framebuffer acceleration and render batching\n");
-			}
+		if (render_driver && strcmp(render_driver, "software") == 0) {
+			use_software_renderer = true;
+			fprintf(stderr, "INFO: Software renderer requested via preferences\n");
 		}
-		else {
+
+		if (!use_software_renderer) {
+			// For non-software renderers, set hints normally
+			if (render_driver) {
+				fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: %s\n", render_driver);
+				SDL_SetHint(SDL_HINT_RENDER_DRIVER, render_driver);
+			}
 #ifdef WIN32
-			fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: software (Windows default)\n");
-			SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
-			renderer_flags |= SDL_RENDERER_SOFTWARE;
+			else {
+				fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: software (Windows default)\n");
+				SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+				use_software_renderer = true;
+			}
 #elif defined(__MACOSX__) && SDL_VERSION_ATLEAST(2,0,14)
-			const char *macos_driver = window_flags & SDL_WINDOW_METAL ? "metal" : "opengl";
-			fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: %s (macOS default)\n", macos_driver);
-			SDL_SetHint(SDL_HINT_RENDER_DRIVER, macos_driver);
-#else
-			fprintf(stderr, "INFO: Using SDL default render driver (no hint set)\n");
-			SDL_SetHint(SDL_HINT_RENDER_DRIVER, "");
+			else {
+				const char *macos_driver = window_flags & SDL_WINDOW_METAL ? "metal" : "opengl";
+				fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: %s (macOS default)\n", macos_driver);
+				SDL_SetHint(SDL_HINT_RENDER_DRIVER, macos_driver);
+			}
 #endif
 	    }
 
@@ -893,10 +891,10 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 		}
 
 		// Try creating renderer with different strategies
-		if (renderer_flags & SDL_RENDERER_SOFTWARE) {
-			// Strategy 1: Try explicit software driver index with no flags
+		if (use_software_renderer) {
+			// For software renderer, use explicit driver index without any hints or flags
 			if (software_driver_index >= 0) {
-				fprintf(stderr, "INFO: Creating renderer with explicit software driver (index %d, flags: 0x0)...\n", software_driver_index);
+				fprintf(stderr, "INFO: Creating renderer with explicit software driver (index %d, NO hints, NO flags)...\n", software_driver_index);
 				fflush(stderr);
 				sdl_renderer = SDL_CreateRenderer(sdl_window, software_driver_index, 0);
 				if (sdl_renderer) {

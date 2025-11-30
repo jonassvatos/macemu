@@ -895,8 +895,19 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 			// For software renderer, use explicit driver index without any hints or flags
 			if (software_driver_index >= 0) {
 				fprintf(stderr, "INFO: Creating renderer with explicit software driver (index %d, NO hints, NO flags)...\n", software_driver_index);
+				fprintf(stderr, "INFO: About to call SDL_CreateRenderer - if output stops here, it's hanging\n");
 				fflush(stderr);
+
+				// Try pumping events before renderer creation in case Wayland needs event processing
+				SDL_PumpEvents();
+				fprintf(stderr, "INFO: Pumped SDL events before renderer creation\n");
+				fflush(stderr);
+
 				sdl_renderer = SDL_CreateRenderer(sdl_window, software_driver_index, 0);
+
+				fprintf(stderr, "INFO: SDL_CreateRenderer returned\n");
+				fflush(stderr);
+
 				if (sdl_renderer) {
 					fprintf(stderr, "INFO: SDL renderer created successfully with explicit software driver\n");
 				} else {

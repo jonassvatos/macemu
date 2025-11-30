@@ -1,0 +1,114 @@
+# Building SheepShaver with SDL2 and Wayland Support
+
+This document describes how to build SheepShaver with native Wayland support using SDL2.
+
+## Prerequisites
+
+Install the required dependencies:
+
+```bash
+apt-get install -y \
+    libsdl2-dev \
+    libsdl2-2.0-0 \
+    libwayland-dev \
+    libxkbcommon-dev \
+    build-essential \
+    autoconf \
+    automake
+```
+
+## Build Instructions
+
+### Option 1: Pure SDL + Wayland (Recommended for Wayland-only systems)
+
+This build removes GTK3 dependency, eliminating X11 requirements:
+
+```bash
+cd SheepShaver/src/Unix
+./autogen.sh --enable-sdl-video --enable-sdl-audio --with-gtk=no
+make -j$(nproc)
+```
+
+**Result**: Binary at `SheepShaver/src/Unix/SheepShaver` (no GTK preferences editor)
+
+### Option 2: SDL + Wayland with GTK3 preferences editor
+
+This includes GTK3 for the prefs editor (requires XWayland or GTK Wayland backend):
+
+```bash
+cd SheepShaver/src/Unix
+./autogen.sh --enable-sdl-video --enable-sdl-audio
+make -j$(nproc)
+```
+
+**Note**: GTK3 may require setting `GDK_BACKEND=wayland` to use native Wayland.
+
+## Running on Wayland
+
+### Auto-detection (Recommended)
+SDL2 will automatically detect and use Wayland when available:
+```bash
+./SheepShaver
+```
+
+### Force Wayland backend
+```bash
+SDL_VIDEODRIVER=wayland ./SheepShaver
+```
+
+### With GTK3 prefs editor on Wayland
+```bash
+GDK_BACKEND=wayland ./SheepShaver
+```
+
+## Configuration Summary
+
+After running `autogen.sh`, you should see:
+```
+SDL support ...................... : video audio
+SDL major-version ................ : 2
+GTK user interface ............... : no      (for pure Wayland)
+                                     GTK3    (with GTK build)
+```
+
+## Verifying Wayland Support
+
+Check that the binary links against Wayland libraries:
+```bash
+ldd SheepShaver | grep wayland
+```
+
+Expected output:
+```
+libwayland-egl.so.1
+libwayland-client.so.0
+libwayland-cursor.so.0
+```
+
+## Troubleshooting
+
+### "Cannot obtain appropriate X visual" error
+This error indicates X11 code is running. Solutions:
+1. Use Option 1 (build without GTK)
+2. Set `GDK_BACKEND=wayland` environment variable
+3. Install XWayland as fallback
+
+### SDL fails to initialize
+Ensure you're in a Wayland session and `XDG_RUNTIME_DIR` is set:
+```bash
+echo $XDG_RUNTIME_DIR
+echo $WAYLAND_DISPLAY
+```
+
+## Build Artifacts
+
+All build artifacts (*.o files, binaries, config files) are ignored by git.
+The source code requires only configuration flags - no code modifications needed.
+
+## Video Backend Details
+
+- **Without `--enable-sdl-video`**: Uses `video_x.cpp` (X11 only)
+- **With `--enable-sdl-video`**: Uses `video_sdl2.cpp` (native Wayland via SDL2)
+
+SDL2 version 2.0.2+ includes native Wayland support and will automatically
+use Wayland when the display server is available.

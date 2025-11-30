@@ -762,6 +762,8 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 	
 	if (!sdl_window) {
 		float m = get_mag_rate();
+		const char *video_driver = SDL_GetCurrentVideoDriver();
+		fprintf(stderr, "INFO: Creating SDL window with driver: %s\n", video_driver ? video_driver : "unknown");
 		sdl_window = SDL_CreateWindow(
 			"",
 			SDL_WINDOWPOS_UNDEFINED,
@@ -774,6 +776,7 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 			shutdown_sdl_video();
 			return NULL;
 		}
+		fprintf(stderr, "INFO: SDL window created successfully\n");
 		set_window_name();
 	}
 	if (flags & SDL_WINDOW_FULLSCREEN) SDL_SetWindowGrab(sdl_window, SDL_TRUE);
@@ -806,6 +809,7 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 			SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 		}
 
+		fprintf(stderr, "INFO: Creating SDL renderer\n");
 		sdl_renderer = SDL_CreateRenderer(sdl_window, -1, 0);
 
 		if (!sdl_renderer) {
@@ -813,6 +817,7 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 			shutdown_sdl_video();
 			return NULL;
 		}
+		fprintf(stderr, "INFO: SDL renderer created successfully\n");
 		sdl_renderer_thread_id = SDL_ThreadID();
 
 		SDL_RendererInfo info;
@@ -908,6 +913,7 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 
 	SDL_RenderSetIntegerScale(sdl_renderer, PrefsFindBool("scale_integer") ? SDL_TRUE : SDL_FALSE);
 
+	fprintf(stderr, "INFO: init_sdl_video completed successfully (%dx%d, depth=%d)\n", width, height, depth);
     return guest_surface;
 }
 

@@ -102,14 +102,26 @@ If the window doesn't appear when running with `SDL_VIDEODRIVER=wayland` or thro
    # Should show something like /run/user/1000
    ```
 
-2. **Check for SDL errors in stderr**:
+2. **Check for SDL errors and debug output in stderr**:
    ```bash
-   SDL_VIDEODRIVER=wayland ./SheepShaver 2>&1 | grep "SDL"
+   SDL_VIDEODRIVER=wayland ./SheepShaver 2>&1 | grep -E "INFO|ERROR|SDL"
    ```
+
+   Expected output if working:
+   ```
+   INFO: Creating SDL window with driver: wayland
+   INFO: SDL window created successfully
+   INFO: Creating SDL renderer
+   INFO: SDL renderer created successfully
+   Using SDL_Renderer driver: opengl
+   INFO: init_sdl_video completed successfully (640x480, depth=32)
+   ```
+
    Common errors:
    - `wayland not available` - No Wayland compositor running
    - `SDL_CreateWindow failed` - Window creation failed (check error details)
    - `SDL_CreateRenderer failed` - Renderer creation failed
+   - No INFO messages at all - SDL might be falling back to X11
 
 3. **For waypipe usage**:
    ```bash

@@ -791,14 +791,22 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 
 	if (!sdl_renderer) {
 		const char *render_driver = PrefsFindString("sdlrender");
+		Uint32 renderer_flags = 0;
+
 		if (render_driver) {
 			fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: %s\n", render_driver);
 			SDL_SetHint(SDL_HINT_RENDER_DRIVER, render_driver);
+			// Force software rendering flag if software renderer is requested
+			if (strcmp(render_driver, "software") == 0) {
+				renderer_flags |= SDL_RENDERER_SOFTWARE;
+				fprintf(stderr, "INFO: Using SDL_RENDERER_SOFTWARE flag\n");
+			}
 		}
 		else {
 #ifdef WIN32
 			fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: software (Windows default)\n");
 			SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
+			renderer_flags |= SDL_RENDERER_SOFTWARE;
 #elif defined(__MACOSX__) && SDL_VERSION_ATLEAST(2,0,14)
 			const char *macos_driver = window_flags & SDL_WINDOW_METAL ? "metal" : "opengl";
 			fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: %s (macOS default)\n", macos_driver);
@@ -816,8 +824,9 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 		}
 
 		fprintf(stderr, "INFO: Creating SDL renderer (this may take a moment)...\n");
+		fprintf(stderr, "INFO: Renderer flags: 0x%x\n", renderer_flags);
 		fflush(stderr);  // Ensure output is visible immediately
-		sdl_renderer = SDL_CreateRenderer(sdl_window, -1, 0);
+		sdl_renderer = SDL_CreateRenderer(sdl_window, -1, renderer_flags);
 
 		if (!sdl_renderer) {
 			fprintf(stderr, "ERROR: SDL_CreateRenderer failed: %s\n", SDL_GetError());

@@ -160,13 +160,18 @@ If the window doesn't appear when running with `SDL_VIDEODRIVER=wayland` or thro
    ./SheepShaver 2>&1 | grep -E "INFO|ERROR"
    ```
 
-   **Verify the setting is being read**: Look for this line in the output:
+   **Verify the setting is being read**: Look for these lines in the output:
    ```
    INFO: Setting SDL_HINT_RENDER_DRIVER to: software
+   INFO: Using SDL_RENDERER_SOFTWARE flag
+   INFO: Renderer flags: 0x1
    ```
 
    If you see "INFO: Using SDL default render driver" instead, the preference
    wasn't loaded. Make sure the preference file exists and contains the line.
+
+   The `SDL_RENDERER_SOFTWARE` flag (0x1) explicitly forces software rendering,
+   which should prevent any GPU/EGL initialization that might block with waypipe.
 
    **Why software renderer?** The OpenGL renderer may hang with waypipe because
    EGL context creation blocks waiting for GPU access. The software renderer

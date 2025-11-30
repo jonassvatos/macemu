@@ -124,6 +124,10 @@ If the window doesn't appear when running with `SDL_VIDEODRIVER=wayland` or thro
    - No INFO messages at all - SDL might be falling back to X11
 
 3. **For waypipe usage**:
+
+   If renderer creation hangs (output stops after "INFO: Creating SDL renderer"),
+   use the software renderer instead of OpenGL:
+
    ```bash
    # On local machine
    waypipe ssh user@remote
@@ -131,8 +135,16 @@ If the window doesn't appear when running with `SDL_VIDEODRIVER=wayland` or thro
    # On remote machine
    export SDL_VIDEODRIVER=wayland
    export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
-   ./SheepShaver
+   ./SheepShaver --sdlrender software
    ```
+
+   Or set it in preferences file `~/.sheepshaver_prefs`:
+   ```
+   sdlrender software
+   ```
+
+   The OpenGL renderer may hang with waypipe because EGL context creation
+   blocks waiting for GPU access. The software renderer avoids this issue.
 
 4. **Check Wayland compositor is running**:
    ```bash

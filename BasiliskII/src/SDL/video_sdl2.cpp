@@ -736,7 +736,7 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 
 	int window_width = width;
 	int window_height = height;
-	Uint32 window_flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_SHOWN;
+	Uint32 window_flags = SDL_WINDOW_HIDDEN;  // Start hidden, show after renderer creation
 	const int window_flags_to_monitor = SDL_WINDOW_FULLSCREEN;
 	
 	if (flags & SDL_WINDOW_FULLSCREEN) {
@@ -804,15 +804,7 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 		}
 
 		set_window_name();
-
-		// Explicitly show and raise the window to ensure it's fully initialized
-		SDL_ShowWindow(sdl_window);
-		SDL_RaiseWindow(sdl_window);
-		fprintf(stderr, "INFO: Window shown and raised\n");
-
-		// Process events to ensure window is fully realized
-		SDL_PumpEvents();
-		fprintf(stderr, "INFO: Pumped SDL events\n");
+		fprintf(stderr, "INFO: Window created in hidden state, will show after renderer creation\n");
 	}
 	if (flags & SDL_WINDOW_FULLSCREEN) SDL_SetWindowGrab(sdl_window, SDL_TRUE);
 	
@@ -946,6 +938,10 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 		SDL_GetRendererInfo(sdl_renderer, &info);
 		fprintf(stderr, "INFO: Using SDL_Renderer driver: %s\n", (info.name ? info.name : "(null)"));
 		printf("Using SDL_Renderer driver: %s\n", (info.name ? info.name : "(null)"));
+
+		// Now show the window after renderer is successfully created
+		SDL_ShowWindow(sdl_window);
+		fprintf(stderr, "INFO: Window shown after renderer creation\n");
 	}
     
     if (!sdl_update_video_mutex) {

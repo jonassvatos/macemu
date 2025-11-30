@@ -792,24 +792,31 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 	if (!sdl_renderer) {
 		const char *render_driver = PrefsFindString("sdlrender");
 		if (render_driver) {
+			fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: %s\n", render_driver);
 			SDL_SetHint(SDL_HINT_RENDER_DRIVER, render_driver);
 		}
 		else {
 #ifdef WIN32
+			fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: software (Windows default)\n");
 			SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 #elif defined(__MACOSX__) && SDL_VERSION_ATLEAST(2,0,14)
-			SDL_SetHint(SDL_HINT_RENDER_DRIVER, window_flags & SDL_WINDOW_METAL ? "metal" : "opengl");
+			const char *macos_driver = window_flags & SDL_WINDOW_METAL ? "metal" : "opengl";
+			fprintf(stderr, "INFO: Setting SDL_HINT_RENDER_DRIVER to: %s (macOS default)\n", macos_driver);
+			SDL_SetHint(SDL_HINT_RENDER_DRIVER, macos_driver);
 #else
+			fprintf(stderr, "INFO: Using SDL default render driver (no hint set)\n");
 			SDL_SetHint(SDL_HINT_RENDER_DRIVER, "");
 #endif
 	    }
 
 		bool sdl_vsync = PrefsFindBool("sdl_vsync");
 		if (sdl_vsync) {
+			fprintf(stderr, "INFO: Enabling VSync\n");
 			SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 		}
 
-		fprintf(stderr, "INFO: Creating SDL renderer\n");
+		fprintf(stderr, "INFO: Creating SDL renderer (this may take a moment)...\n");
+		fflush(stderr);  // Ensure output is visible immediately
 		sdl_renderer = SDL_CreateRenderer(sdl_window, -1, 0);
 
 		if (!sdl_renderer) {
@@ -823,23 +830,28 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 		SDL_RendererInfo info;
 		memset(&info, 0, sizeof(info));
 		SDL_GetRendererInfo(sdl_renderer, &info);
+		fprintf(stderr, "INFO: Using SDL_Renderer driver: %s\n", (info.name ? info.name : "(null)"));
 		printf("Using SDL_Renderer driver: %s\n", (info.name ? info.name : "(null)"));
 	}
     
     if (!sdl_update_video_mutex) {
+        fprintf(stderr, "INFO: Creating SDL video mutex\n");
         sdl_update_video_mutex = SDL_CreateMutex();
     }
 
 	SDL_assert(sdl_texture == NULL);
+	fprintf(stderr, "INFO: Creating SDL texture (%dx%d)\n", width, height);
 #ifdef ENABLE_VOSF
 	sdl_texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
 #else
 	sdl_texture = SDL_CreateTexture(sdl_renderer, SDL_PIXELFORMAT_BGRA8888, SDL_TEXTUREACCESS_STREAMING, width, height);
 #endif
     if (!sdl_texture) {
+        fprintf(stderr, "ERROR: SDL_CreateTexture failed: %s\n", SDL_GetError());
         shutdown_sdl_video();
         return NULL;
     }
+    fprintf(stderr, "INFO: SDL texture created successfully\n");
     sdl_update_video_rect.x = 0;
     sdl_update_video_rect.y = 0;
     sdl_update_video_rect.w = 0;
@@ -904,6 +916,7 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
         }
     }
 
+	fprintf(stderr, "INFO: Setting SDL renderer logical size to %dx%d\n", width, height);
 	if (SDL_RenderSetLogicalSize(sdl_renderer, width, height) != 0) {
 		printf("ERROR: Unable to set SDL rendeer's logical size (to %dx%d): %s\n",
 			   width, height, SDL_GetError());
@@ -911,6 +924,7 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 		return NULL;
 	}
 
+	fprintf(stderr, "INFO: Setting SDL renderer integer scale\n");
 	SDL_RenderSetIntegerScale(sdl_renderer, PrefsFindBool("scale_integer") ? SDL_TRUE : SDL_FALSE);
 
 	fprintf(stderr, "INFO: init_sdl_video completed successfully (%dx%d, depth=%d)\n", width, height, depth);

@@ -111,9 +111,16 @@ If the window doesn't appear when running with `SDL_VIDEODRIVER=wayland` or thro
    ```
    INFO: Creating SDL window with driver: wayland
    INFO: SDL window created successfully
-   INFO: Creating SDL renderer
+   INFO: Setting SDL_HINT_RENDER_DRIVER to: software
+   INFO: Creating SDL renderer (this may take a moment)...
    INFO: SDL renderer created successfully
-   Using SDL_Renderer driver: opengl
+   INFO: Using SDL_Renderer driver: software
+   Using SDL_Renderer driver: software
+   INFO: Creating SDL video mutex
+   INFO: Creating SDL texture (640x480)
+   INFO: SDL texture created successfully
+   INFO: Setting SDL renderer logical size to 640x480
+   INFO: Setting SDL renderer integer scale
    INFO: init_sdl_video completed successfully (640x480, depth=32)
    ```
 
@@ -122,12 +129,27 @@ If the window doesn't appear when running with `SDL_VIDEODRIVER=wayland` or thro
    - `SDL_CreateWindow failed` - Window creation failed (check error details)
    - `SDL_CreateRenderer failed` - Renderer creation failed
    - No INFO messages at all - SDL might be falling back to X11
+   - Output stops at "Creating SDL renderer" - Renderer creation is hanging (see waypipe section below)
 
 3. **For waypipe usage**:
 
    If renderer creation hangs (output stops after "INFO: Creating SDL renderer"),
-   use the software renderer instead of OpenGL:
+   use the software renderer instead of OpenGL.
 
+   **IMPORTANT**: The `--sdlrender` command-line option is not currently supported.
+   You must set the preference in one of these ways:
+
+   **Method 1**: Create/edit preferences file `~/.sheepshaver_prefs` and add:
+   ```
+   sdlrender software
+   ```
+
+   **Method 2**: Set via command-line (creates preference):
+   ```bash
+   echo "sdlrender software" >> ~/.sheepshaver_prefs
+   ```
+
+   Then run with Wayland:
    ```bash
    # On local machine
    waypipe ssh user@remote
@@ -135,16 +157,20 @@ If the window doesn't appear when running with `SDL_VIDEODRIVER=wayland` or thro
    # On remote machine
    export SDL_VIDEODRIVER=wayland
    export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
-   ./SheepShaver --sdlrender software
+   ./SheepShaver 2>&1 | grep -E "INFO|ERROR"
    ```
 
-   Or set it in preferences file `~/.sheepshaver_prefs`:
+   **Verify the setting is being read**: Look for this line in the output:
    ```
-   sdlrender software
+   INFO: Setting SDL_HINT_RENDER_DRIVER to: software
    ```
 
-   The OpenGL renderer may hang with waypipe because EGL context creation
-   blocks waiting for GPU access. The software renderer avoids this issue.
+   If you see "INFO: Using SDL default render driver" instead, the preference
+   wasn't loaded. Make sure the preference file exists and contains the line.
+
+   **Why software renderer?** The OpenGL renderer may hang with waypipe because
+   EGL context creation blocks waiting for GPU access. The software renderer
+   avoids this issue.
 
 4. **Check Wayland compositor is running**:
    ```bash

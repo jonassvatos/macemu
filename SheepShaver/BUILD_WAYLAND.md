@@ -85,6 +85,43 @@ libwayland-client.so.0
 libwayland-cursor.so.0
 ```
 
+## Known Issues
+
+### SDL2 2.30.x Wayland Renderer Hang
+
+**Problem**: SDL 2.30.56 has a bug where `SDL_CreateRenderer()` hangs indefinitely on Wayland, regardless of which renderer backend (software, OpenGL, Vulkan) is selected. The window is created successfully, but renderer creation never completes.
+
+**Diagnosis**: If output stops at "About to call SDL_CreateRenderer - if output stops here, it's hanging", this confirms the SDL2 Wayland renderer bug.
+
+**Workaround**: Use X11 via XWayland instead of native Wayland:
+
+```bash
+# Install XWayland if not already installed
+apt-get install xwayland
+
+# Run with X11 backend (will use XWayland on Wayland sessions)
+./SheepShaver
+# Or explicitly:
+SDL_VIDEODRIVER=x11 ./SheepShaver
+```
+
+**Note**: XWayland provides X11 compatibility on Wayland, so the application will work but won't use native Wayland protocols. For waypipe usage, this means you'll need to forward X11 instead:
+
+```bash
+# Instead of waypipe, use SSH X11 forwarding:
+ssh -X user@remote
+./SheepShaver
+```
+
+**Future**: This may be fixed in newer SDL2 versions or SDL3. To test with a different SDL2 version:
+```bash
+# Check your SDL2 version
+sdl2-config --version
+
+# Upgrade SDL2 (example for Ubuntu/Debian)
+apt-get update && apt-get upgrade libsdl2-dev libsdl2-2.0-0
+```
+
 ## Troubleshooting
 
 ### "Cannot obtain appropriate X visual" error

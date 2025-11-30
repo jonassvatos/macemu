@@ -770,6 +770,7 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 			m * window_height,
 			window_flags);
 		if (!sdl_window) {
+			fprintf(stderr, "ERROR: SDL_CreateWindow failed: %s\n", SDL_GetError());
 			shutdown_sdl_video();
 			return NULL;
 		}
@@ -808,6 +809,7 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 		sdl_renderer = SDL_CreateRenderer(sdl_window, -1, 0);
 
 		if (!sdl_renderer) {
+			fprintf(stderr, "ERROR: SDL_CreateRenderer failed: %s\n", SDL_GetError());
 			shutdown_sdl_video();
 			return NULL;
 		}

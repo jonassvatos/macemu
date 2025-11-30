@@ -93,12 +93,46 @@ This error indicates X11 code is running. Solutions:
 2. Set `GDK_BACKEND=wayland` environment variable
 3. Install XWayland as fallback
 
-### SDL fails to initialize
-Ensure you're in a Wayland session and `XDG_RUNTIME_DIR` is set:
-```bash
-echo $XDG_RUNTIME_DIR
-echo $WAYLAND_DISPLAY
-```
+### Window doesn't appear when using Wayland
+If the window doesn't appear when running with `SDL_VIDEODRIVER=wayland` or through waypipe:
+
+1. **Check XDG_RUNTIME_DIR is set**:
+   ```bash
+   echo $XDG_RUNTIME_DIR
+   # Should show something like /run/user/1000
+   ```
+
+2. **Check for SDL errors in stderr**:
+   ```bash
+   SDL_VIDEODRIVER=wayland ./SheepShaver 2>&1 | grep "SDL"
+   ```
+   Common errors:
+   - `wayland not available` - No Wayland compositor running
+   - `SDL_CreateWindow failed` - Window creation failed (check error details)
+   - `SDL_CreateRenderer failed` - Renderer creation failed
+
+3. **For waypipe usage**:
+   ```bash
+   # On local machine
+   waypipe ssh user@remote
+
+   # On remote machine
+   export SDL_VIDEODRIVER=wayland
+   export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+   ./SheepShaver
+   ```
+
+4. **Check Wayland compositor is running**:
+   ```bash
+   echo $WAYLAND_DISPLAY
+   # Should show something like wayland-0 or wayland-1
+   ```
+
+5. **Test SDL2 Wayland support**:
+   ```bash
+   SDL_VIDEODRIVER=wayland SDL2_test_window
+   # Or use the test program from SDL2 examples
+   ```
 
 ## Build Artifacts
 

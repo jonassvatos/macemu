@@ -711,10 +711,16 @@ static bool init_sdl()
 
 #ifdef USE_SDL_VIDEO
 #if REAL_ADDRESSING && defined(GDK_WINDOWING_WAYLAND)
-	// Needed to fix a crash when using Wayland
+	// Needed to fix a crash when using Wayland with GTK
 	// Forces use of XWayland instead
 	setenv("SDL_VIDEODRIVER", "x11", true);
 #endif
+
+	// Note: SDL2 2.30.x has a bug where SDL_CreateRenderer() hangs indefinitely
+	// on native Wayland. The window creates successfully but renderer creation
+	// never completes. Using X11 (via XWayland on Wayland sessions) is the
+	// current workaround. This affects all renderer backends (software, OpenGL, etc).
+	// See BUILD_WAYLAND.md for details.
 
 	// Don't let SDL block the screensaver
 	setenv("SDL_VIDEO_ALLOW_SCREENSAVER", "1", true);

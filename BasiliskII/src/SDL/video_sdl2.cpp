@@ -800,6 +800,11 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 			if (strcmp(render_driver, "software") == 0) {
 				renderer_flags |= SDL_RENDERER_SOFTWARE;
 				fprintf(stderr, "INFO: Using SDL_RENDERER_SOFTWARE flag\n");
+
+				// Additional hints to minimize blocking behavior with software renderer
+				SDL_SetHint(SDL_HINT_FRAMEBUFFER_ACCELERATION, "0");
+				SDL_SetHint(SDL_HINT_RENDER_BATCHING, "0");
+				fprintf(stderr, "INFO: Disabled framebuffer acceleration and render batching\n");
 			}
 		}
 		else {
@@ -821,8 +826,27 @@ static SDL_Surface *init_sdl_video(int width, int height, int depth, Uint32 flag
 		if (sdl_vsync) {
 			fprintf(stderr, "INFO: Enabling VSync\n");
 			SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+		} else {
+			SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
 		}
 
+		// Enumerate available render drivers for diagnostics
+		fprintf(stderr, "INFO: Calling SDL_GetNumRenderDrivers()...\n");
+		fflush(stderr);
+		int num_drivers = SDL_GetNumRenderDrivers();
+		fprintf(stderr, "INFO: Available SDL render drivers (%d):\n", num_drivers);
+		fflush(stderr);
+		for (int i = 0; i < num_drivers; i++) {
+			SDL_RendererInfo info;
+			fprintf(stderr, "INFO: Getting info for driver %d...\n", i);
+			fflush(stderr);
+			if (SDL_GetRenderDriverInfo(i, &info) == 0) {
+				fprintf(stderr, "  [%d] %s (flags: 0x%x)\n", i, info.name, info.flags);
+				fflush(stderr);
+			}
+		}
+
+		fprintf(stderr, "INFO: Finished enumerating drivers\n");
 		fprintf(stderr, "INFO: Creating SDL renderer (this may take a moment)...\n");
 		fprintf(stderr, "INFO: Renderer flags: 0x%x\n", renderer_flags);
 		fflush(stderr);  // Ensure output is visible immediately
